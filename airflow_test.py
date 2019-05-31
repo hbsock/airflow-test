@@ -3,19 +3,22 @@ Code that goes along with the Airflow tutorial located at:
 https://github.com/apache/airflow/blob/master/airflow/example_dags/tutorial.py
 """
 from airflow import DAG
+from airflow.sensors.s3_key_sensor import S3KeySensor
 from airflow.operators.bash_operator import BashOperator
 from datetime import datetime, timedelta
+
+AWS_BUCKET_NAME = 'hanbin-test-poc-input'
 
 
 default_args = {
     'owner': 'hsock',
     'depends_on_past': False,
-    'start_date': datetime(2015, 6, 1),
-    'email': ['airflow@example.com'],
+    'start_date': datetime(2019, 5, 30),
+    'email': ['hbsock@gmail.com'],
     'email_on_failure': False,
     'email_on_retry': False,
-    'retries': 1,
-    'retry_delay': timedelta(minutes=5),
+    'retries': 2,
+    'retry_delay': timedelta(minutes=1),
     # 'queue': 'bash_queue',
     # 'pool': 'backfill',
     # 'priority_weight': 10,
@@ -28,12 +31,6 @@ dag = DAG('hsock_tutorial', default_args=default_args, schedule_interval=timedel
 t1 = BashOperator(
     task_id='print_date',
     bash_command='date',
-    dag=dag)
-
-t2 = BashOperator(
-    task_id='sleep',
-    bash_command='sleep 5',
-    retries=3,
     dag=dag)
 
 templated_command = """
@@ -50,5 +47,14 @@ t3 = BashOperator(
     params={'my_param': 'Parameter I passed in'},
     dag=dag)
 
-t2.set_upstream(t1)
-t3.set_upstream(t1)
+
+s3_sensor = S3KeySensor(
+    task_id='s3_key_sensor',
+    bucket_key='some_folder/*',
+    wildcard_match=True,
+    bucket_name=AWS_BUCKET_NAME,
+    timeout=10,
+    poke_interval=60,
+    dag=dag)
+
+s3_sensor >> t1 >> t3
