@@ -5,6 +5,8 @@ https://github.com/apache/airflow/blob/master/airflow/example_dags/tutorial.py
 from airflow import DAG
 from airflow.sensors.s3_key_sensor import S3KeySensor
 from airflow.operators.bash_operator import BashOperator
+from airflow.operators.email_operator import EmailOperator
+
 from datetime import datetime, timedelta
 
 AWS_BUCKET_NAME = 'hanbin-test-poc-input'
@@ -50,11 +52,18 @@ t3 = BashOperator(
 
 s3_sensor = S3KeySensor(
     task_id='s3_key_sensor',
-    bucket_key='some_folder/*',
+    bucket_key='some_folder/input/*',
     wildcard_match=True,
     bucket_name=AWS_BUCKET_NAME,
     timeout=10,
     poke_interval=60,
     dag=dag)
 
-s3_sensor >> t1 >> t3
+email_op = EmailOperator(
+    task_id='send_email',
+    subject='test email',
+    to='hbsock@gmail.com',
+    html_content='TEXT CONTENT',
+    dag=dag)
+
+s3_sensor >> t1 >> t3 >> email_op
