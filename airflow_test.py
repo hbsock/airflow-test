@@ -17,8 +17,8 @@ default_args = {
     'depends_on_past': False,
     'start_date': datetime(2019, 5, 30),
     'email': ['hbsock@gmail.com'],
-    'email_on_failure': False,
-    'email_on_retry': False,
+    'email_on_failure': True,
+    'email_on_retry': True,
     'retries': 2,
     'retry_delay': timedelta(minutes=1),
     # 'queue': 'bash_queue',
@@ -66,4 +66,11 @@ email_op = EmailOperator(
     html_content='TEXT CONTENT',
     dag=dag)
 
-s3_sensor >> t1 >> t3 >> email_op
+fail_op = BashOperator(
+    task_id='fail_op',
+    bash_command='exit 1',
+    dag=dag)
+
+s3_sensor >> t1 >> t3 >> fail_op
+
+#t3 >> email_op
